@@ -3084,6 +3084,14 @@ do
 		return DBM.Bars:UpdateBar(id, elapsed, totalTime)
 	end
 
+	function timerPrototype:AddTime(time, ...) 
+		local id = self.id..pformat((("\t%s"):rep(select("#", ...))), ...)
+		local timer = self:GetTime(...) - time -- GetTime() = elapsed time on timer
+		if timer then
+			return DBM.Bars:UpdateBar(id, timer)
+		end
+	end
+
 	function timerPrototype:UpdateIcon(icon, ...)
 		local id = self.id..pformat((("\t%s"):rep(select("#", ...))), ...)
 		local bar = DBM.Bars:GetBar(id)
