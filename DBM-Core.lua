@@ -56,6 +56,7 @@ DBM.DefaultOptions = {
 		{r = 0.95, g = 0.95, b = 0.00}, -- Color 2 - #F2F200 - Yellow
 		{r = 1.00, g = 0.50, b = 0.00}, -- Color 3 - #FF8000 - Orange
 		{r = 1.00, g = 0.10, b = 0.10}, -- Color 4 - #FF1A1A - Red
+		--{r = 0.00, g = 1.00, b = 0.00}, -- Color 5 - #7CFC00? - Green
 	},
 	RaidWarningSound = "Sound\\Doodad\\BellTollNightElf.wav",
 	SpecialWarningSound = "Sound\\Spells\\PVPFlagTaken.wav",
@@ -259,9 +260,9 @@ do
 	local argsMT = {__index = {}}
 	local args = setmetatable({}, argsMT)
 	
-	function argsMT.__index:IsSpellID(a1, a2, a3, a4)
+	function argsMT.__index:IsSpellID(a1, a2, a3, a4, a5, a6, a7, a8)
 		local v = self.spellId
-		return v == a1 or v == a2 or v == a3 or v == a4
+		return v == a1 or v == a2 or v == a3 or v == a4 or v == a5 or v == a6 or v == a7 or v == a8
 	end
 	
 	function argsMT.__index:IsPlayer()
@@ -2457,11 +2458,21 @@ end
 -- returns heroic for old instances that do not have a heroic mode (Naxx, Ulduar...)
 function bossModPrototype:GetDifficulty() 
 	local _, instanceType, difficulty, _, _, playerDifficulty, isDynamicInstance = GetInstanceInfo()
+	--if instanceType == "raid" and isDynamicInstance then -- "new" instance (ICC)
+	--	if difficulty == 1 then -- 10 men
+	--		return playerDifficulty == 0 and "normal10" or playerDifficulty == 1 and "heroic10" or "unknown"
+	--	elseif difficulty == 2 then -- 25 men
+	--		return playerDifficulty == 0 and "normal25" or playerDifficulty == 1 and "heroic25" or "unknown"
+	--	end
 	if instanceType == "raid" and isDynamicInstance then -- "new" instance (ICC)
 		if difficulty == 1 then -- 10 men
-			return playerDifficulty == 0 and "normal10" or playerDifficulty == 1 and "heroic10" or "unknown"
+			return playerDifficulty == 0 and "normal10" or "unknown"
 		elseif difficulty == 2 then -- 25 men
-			return playerDifficulty == 0 and "normal25" or playerDifficulty == 1 and "heroic25" or "unknown"
+			return playerDifficulty == 0 and "normal25" or "unknown"
+		elseif difficulty == 3 then -- 10 men hc
+			return playerDifficulty == 1 and "heroic10" or "unknown"
+		elseif difficulty == 4 then -- 25 men hc
+			return playerDifficulty == 1 and "heroic25" or "unknown"
 		end
 	else -- support for "old" instances
 		if GetInstanceDifficulty() == 1 then 
@@ -2649,6 +2660,26 @@ do
 			{
 				text = self.localization.warnings[text],
 				color = DBM.Options.WarningColors[color or 1] or DBM.Options.WarningColors[1],
+				option = optionName or text,
+				mod = self,
+				icon = (type(icon) == "number" and select(3, GetSpellInfo(icon))) or icon,
+			},
+			mt
+		)
+		if optionName == false then
+			obj.option = nil
+		else
+			self:AddBoolOption(optionName or text, optionDefault, "announce")
+		end
+		table.insert(self.announces, obj)
+		return obj
+	end
+
+	function bossModPrototype:NewAnnounceCustom(text, color, icon, optionDefault, optionName)
+		local obj = setmetatable(
+			{
+				text = self.localization.warnings[text],
+				color = {r = 0.00, g = 1.00, b = 0.00},
 				option = optionName or text,
 				mod = self,
 				icon = (type(icon) == "number" and select(3, GetSpellInfo(icon))) or icon,
@@ -3064,6 +3095,12 @@ do
 		local id = self.id..pformat((("\t%s"):rep(select("#", ...))), ...)
 		local bar = DBM.Bars:GetBar(id)
 		return bar and (bar.totalTime - bar.timer) or 0, (bar and bar.totalTime) or 0
+	end
+
+	function timerPrototype:Time(...)
+		local id = self.id..pformat((("\t%s"):rep(select("#", ...))), ...)
+		local bar = DBM.Bars:GetBar(id)
+		return bar.totalTime or 0
 	end
 	
 	function timerPrototype:IsStarted(...)
